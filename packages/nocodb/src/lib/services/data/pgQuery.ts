@@ -1,7 +1,12 @@
 import Model from '../../models/Model';
 import NcConnectionMgrv2 from '../../utils/common/NcConnectionMgrv2';
 import { isSystemColumn, RelationTypes, UITypes } from 'nocodb-sdk';
-import { sanitize } from '../../db/sql-data-mapper/lib/sql/BaseModelSqlv2';
+import {
+  extractFilterFromXwhere,
+  extractSortsObject,
+  getListArgs,
+  sanitize
+} from '../../db/sql-data-mapper/lib/sql/BaseModelSqlv2';
 import genRollupSelectv2 from '../../db/sql-data-mapper/lib/sql/genRollupSelectv2';
 import LookupColumn from '../../models/LookupColumn';
 import LinkToAnotherRecordColumn from '../../models/LinkToAnotherRecordColumn';
@@ -37,14 +42,50 @@ export async function populateSingleQuery(ctx: {
 
   // get knex connection
   const knex = NcConnectionMgrv2.get(ctx.base);
+  // load columns list
+  await ctx.model.getColumns();
+  const listArgs = getListArgs(ctx.params, ctx.model);
 
   const rootQb = knex(ctx.model.table_name);
 
-  const filters = await Filter.getFilterObject({ viewId: ctx.view.id });
-  const sorts = await Sort.list({ viewId: ctx.view.id });
+  const aliasColObjMap = await ctx.model.getAliasColObjMap();
+  let sorts = extractSortsObject(listArgs?.sort, aliasColObjMap);
+  const queryFilterObj = extractFilterFromXwhere(
+    listArgs?.where,
+    aliasColObjMap
+  );
 
-  await conditionV2(filters as any, rootQb, knex);
-  await sortV2(sorts, rootQb, knex);
+  if (!sorts?.['length'] && ctx.params.sortArr?.length) {
+    sorts = ctx.params.sortArr;
+  } else if (ctx.view) {
+    sorts = await Sort.list({ viewId: ctx.view.id });
+  }
+
+  await conditionV2(
+    [
+      new Filter({
+        children:
+          (await Filter.rootFilterList({
+            viewId: await Filter.getFilterObject({ viewId: ctx.view.id })
+          })) || [],
+        is_group: true
+      }),
+      new Filter({
+        children: ctx.params.filterArr || [],
+        is_group: true,
+        logical_op: 'and'
+      }),
+      new Filter({
+        children: queryFilterObj,
+        is_group: true,
+        logical_op: 'and'
+      })
+    ],
+    rootQb,
+    knex
+  );
+  if (sorts) await sortV2(sorts, rootQb, knex);
+
   const qb = knex.from(rootQb.as(ROOT_ALIAS));
 
   let allowedCols = null;
@@ -67,7 +108,8 @@ export async function populateSingleQuery(ctx: {
     });
   }
 
-  rootQb.limit(1);
+  rootQb.limit(+listArgs.limit);
+  rootQb.offset(+listArgs.offset);
 
   return qb;
 }

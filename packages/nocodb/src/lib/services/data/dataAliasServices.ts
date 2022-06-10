@@ -6,8 +6,13 @@ import getAst from '../../db/sql-data-mapper/lib/sql/helpers/getAst';
 import { PagedResponseImpl } from '../../meta/helpers/PagedResponse';
 import { nocoExecute } from 'nc-help';
 import { populateSingleQuery } from './pgQuery';
+import { Request } from 'express';
 
-export async function getDataList(model: Model, view: View, req) {
+export async function getDataList(
+  model: Model,
+  view: View,
+  req: Request
+): Promise<PagedResponseImpl<any>> {
   const base = await Base.get(model.base_id);
 
   const baseModel = await Model.getBaseModelSQL({
@@ -16,7 +21,7 @@ export async function getDataList(model: Model, view: View, req) {
     dbDriver: NcConnectionMgrv2.get(base)
   });
   let data;
-  const listArgs: any = { ...req.query, limit: 1 };
+  const listArgs: any = { ...req.query };
   try {
     listArgs.filterArr = JSON.parse(listArgs.filterArrJson);
   } catch (e) {}
@@ -24,7 +29,10 @@ export async function getDataList(model: Model, view: View, req) {
     listArgs.sortArr = JSON.parse(listArgs.sortArrJson);
   } catch (e) {}
 
-  if (process.env.NC_PG_OPTIMISE && base.type === 'pg') {
+  if (
+    (process.env.NC_PG_OPTIMISE || req?.headers?.['nc-pg-optimise']) &&
+    base.type === 'pg'
+  ) {
     data = await populateSingleQuery({ view, model, base, params: listArgs });
   } else {
     const requestObj = await getAst({ model, query: req.query, view });
@@ -35,7 +43,7 @@ export async function getDataList(model: Model, view: View, req) {
       listArgs
     );
   }
-  const count = 9000; // await baseModel.count(listArgs);
+  const count = await baseModel.count(listArgs);
 
   return new PagedResponseImpl(data, {
     ...req.query,
