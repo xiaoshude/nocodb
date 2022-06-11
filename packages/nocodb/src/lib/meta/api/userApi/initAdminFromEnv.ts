@@ -30,7 +30,7 @@ export default async function initAdminFromEnv(_ncMeta = Noco.ncMeta) {
       const email_verification_token = uuidv4();
 
       // if super admin not present
-      if (await User.isFirst()) {
+      if (await User.isFirst(ncMeta)) {
         const roles = 'user,super';
 
         // roles = 'owner,creator,editor'
@@ -67,7 +67,7 @@ export default async function initAdminFromEnv(_ncMeta = Noco.ncMeta) {
           // if user already present and associated with some project
 
           // check user account already present with the new admin email
-          const existingUserWithNewEmail = await User.getByEmail(email);
+          const existingUserWithNewEmail = await User.getByEmail(email, ncMeta);
 
           if (existingUserWithNewEmail) {
             // get all project access belongs to the existing account
