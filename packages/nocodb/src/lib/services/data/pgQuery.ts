@@ -35,7 +35,7 @@ export async function populateSingleQuery(ctx: {
   view: View;
   base: Base;
   params;
-}) {
+}): Promise<{ count?: number | string; data: any[] }> {
   if (ctx.base.type !== 'pg') {
     new Error('Single query only supported in postgres');
   }
@@ -47,6 +47,8 @@ export async function populateSingleQuery(ctx: {
   const listArgs = getListArgs(ctx.params, ctx.model);
 
   const rootQb = knex(ctx.model.table_name);
+  const countQb = knex(ctx.model.table_name);
+  countQb.count({ count: ctx.model.primaryKey?.column_name || '*' });
 
   const aliasColObjMap = await ctx.model.getAliasColObjMap();
   let sorts = extractSortsObject(listArgs?.sort, aliasColObjMap);
@@ -61,29 +63,28 @@ export async function populateSingleQuery(ctx: {
     sorts = await Sort.list({ viewId: ctx.view.id });
   }
 
-  await conditionV2(
-    [
-      new Filter({
-        children:
-          (await Filter.rootFilterList({
-            viewId: await Filter.getFilterObject({ viewId: ctx.view.id })
-          })) || [],
-        is_group: true
-      }),
-      new Filter({
-        children: ctx.params.filterArr || [],
-        is_group: true,
-        logical_op: 'and'
-      }),
-      new Filter({
-        children: queryFilterObj,
-        is_group: true,
-        logical_op: 'and'
-      })
-    ],
-    rootQb,
-    knex
-  );
+  const aggrConditionObj = [
+    new Filter({
+      children:
+        (await Filter.rootFilterList({
+          viewId: await Filter.getFilterObject({ viewId: ctx.view.id })
+        })) || [],
+      is_group: true
+    }),
+    new Filter({
+      children: ctx.params.filterArr || [],
+      is_group: true,
+      logical_op: 'and'
+    }),
+    new Filter({
+      children: queryFilterObj,
+      is_group: true,
+      logical_op: 'and'
+    })
+  ];
+
+  await conditionV2(aggrConditionObj, rootQb, knex);
+  await conditionV2(aggrConditionObj, countQb, knex);
   if (sorts) await sortV2(sorts, rootQb, knex);
 
   const qb = knex.from(rootQb.as(ROOT_ALIAS));
@@ -111,7 +112,14 @@ export async function populateSingleQuery(ctx: {
   rootQb.limit(+listArgs.limit);
   rootQb.offset(+listArgs.offset);
 
-  return qb;
+  const dataAlias = getAlias();
+  return knex
+    .from(qb.as(dataAlias))
+    .select(
+      knex.raw(`coalesce(json_agg(??.*),'[]'::json) as ??`, [dataAlias, 'data'])
+    )
+    .select(countQb.as('count'))
+    .first();
 }
 
 async function extractColumn({

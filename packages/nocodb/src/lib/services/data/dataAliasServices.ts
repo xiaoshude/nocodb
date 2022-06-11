@@ -21,6 +21,7 @@ export async function getDataList(
     dbDriver: NcConnectionMgrv2.get(base)
   });
   let data;
+  let count;
   const listArgs: any = { ...req.query };
   try {
     listArgs.filterArr = JSON.parse(listArgs.filterArrJson);
@@ -33,7 +34,14 @@ export async function getDataList(
     (process.env.NC_PG_OPTIMISE || req?.headers?.['nc-pg-optimise']) &&
     base.type === 'pg'
   ) {
-    data = await populateSingleQuery({ view, model, base, params: listArgs });
+    const out = await populateSingleQuery({
+      view,
+      model,
+      base,
+      params: listArgs
+    });
+    count = +out.count;
+    data = out.data;
   } else {
     const requestObj = await getAst({ model, query: req.query, view });
     data = await nocoExecute(
@@ -42,8 +50,8 @@ export async function getDataList(
       {},
       listArgs
     );
+    count = await baseModel.count(listArgs);
   }
-  const count = await baseModel.count(listArgs);
 
   return new PagedResponseImpl(data, {
     ...req.query,
