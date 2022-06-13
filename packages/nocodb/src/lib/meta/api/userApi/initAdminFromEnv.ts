@@ -104,11 +104,13 @@ export default async function initAdminFromEnv(_ncMeta = Noco.ncMeta) {
                 }
               } else {
                 // if super doesn't have access then add the access
-                await ProjectUser.insert({
-                  ...existingUserProject,
-                  fk_user_id: superUser.id,
+                await ProjectUser.insert(
+                  {
+                    ...existingUserProject,
+                    fk_user_id: superUser.id
+                  },
                   ncMeta
-                });
+                );
               }
               // delete the old project access entry from DB
               await ProjectUser.delete(
@@ -122,7 +124,7 @@ export default async function initAdminFromEnv(_ncMeta = Noco.ncMeta) {
             ncMeta.metaDelete(
               null,
               null,
-              MetaTable.PROJECT_USERS,
+              MetaTable.USERS,
               existingUserWithNewEmail.id
             );
 

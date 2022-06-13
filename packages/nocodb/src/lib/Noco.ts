@@ -187,8 +187,8 @@ export default class Noco {
     }
 
     await Noco._ncMeta.metaInit();
-
     await this.readOrGenJwtSecret();
+    await initAdminFromEnv();
 
     await NcUpgrader.upgrade({ ncMeta: Noco._ncMeta });
 
@@ -247,8 +247,6 @@ export default class Noco {
 
     await NcPluginMgrv2.init(Noco.ncMeta);
     registerMetaApis(this.router, server);
-
-    await initAdminFromEnv();
 
     this.router.use(
       this.config.dashboardPath,
