@@ -9,9 +9,6 @@
     <envs>
       <env name="NC_DISABLE_CACHE1" value="true" />
       <env name="NC_DISABLE_TELE" value="true" />
-      <env name="NC_PG_OPTIMISE" value="true" />
-      <env name="NC_ADMIN_EMAIL" value="b@b.com" />
-      <env name="NC_ADMIN_PASSWORD" value="Password1." />
     </envs>
     <method v="2" />
   </configuration>
