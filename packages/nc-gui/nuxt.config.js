@@ -27,7 +27,7 @@ export default {
   */
   head: {
     titleTemplate: '',
-    title: 'NocoDB',
+    title: 'Admin',
     meta: [
       { charset: 'utf-8' },
       {
@@ -112,7 +112,7 @@ export default {
   modules: [
     // Doc: https://axios.nuxtjs.org/usage
     '@nuxtjs/axios',
-    'vue-github-buttons/nuxt',
+    // 'vue-github-buttons/nuxt',
     '@nuxtjs/toast'
   ],
   toast: {

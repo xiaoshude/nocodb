@@ -13,7 +13,7 @@
         class="text-center "
       >
         <h1 class="mt-8 mb-4 primary--text  mt-1  white--tex mb-0 text-h2 font-weight-black">
-          NocoDB <br><span
+          Admin <br><span
             class="textColor--text text--lighten-1"
           >The Open Source<br>
             NoCode Database</span>

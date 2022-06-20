@@ -301,7 +301,7 @@
           <webhook-slider v-model="webhookSliderModal" :meta="meta" />
         </div>
 
-        <div
+        <!-- <div
           v-if="!isSharedBase && time - $store.state.settings.miniSponsorCard > 15 * 60 * 1000"
           class="py-2 sponsor-wrapper"
         >
@@ -339,7 +339,7 @@
               </v-btn>
             </template>
           </flip-card>
-        </div>
+        </div> -->
       </div>
     </v-container>
 
